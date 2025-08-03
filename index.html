@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberPatrol - Symulator Pulpitu (Final Nightmare)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Exo+2:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a1a;
+            --primary: #00f2ff;
+            --secondary: #ff00c1;
+            --accent: #a8ff00;
+            --text-light: #e0e0ff;
+            --border-color: rgba(0, 242, 255, 0.3);
+            --danger: #ff4d4d;
+            --success: #4dff88;
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(0, 242, 255, 0.05), transparent 30%),
+                radial-gradient(circle at 85% 30%, rgba(255, 0, 193, 0.05), transparent 30%),
+                url('https://www.transparenttextures.com/patterns/hexellence.png');
+            overflow: hidden;
+        }
+
+        .desktop { width: 100%; height: 100vh; position: relative; overflow: hidden; }
+
+        .desktop-icon {
+            color: var(--text-light); text-align: center; cursor: pointer;
+            transition: transform 0.2s ease, color 0.2s ease;
+            width: 100px; padding: 10px; position: relative;
+        }
+        .desktop-icon:hover { transform: scale(1.1); color: var(--primary); }
+        .desktop-icon i { font-size: 48px; text-shadow: 0 0 10px var(--primary); }
+        .desktop-icon span { display: block; margin-top: 8px; font-size: 14px; }
+        .desktop-icon .alert-dot {
+            position: absolute; top: 10px; right: 20px; width: 15px; height: 15px;
+            background-color: var(--danger); border-radius: 50%;
+            box-shadow: 0 0 10px var(--danger); animation: pulse 1.5s infinite;
+            display: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(0.9); opacity: 1; }
+        }
+        
+        #desktop-threat-file, #second-cursor {
+            position: absolute; text-align: center;
+            cursor: pointer; transition: transform 0.2s ease; display: none;
+        }
+        #desktop-threat-file:hover, #second-cursor:hover { transform: scale(1.1); }
+        #desktop-threat-file { top: 50%; left: 60%; }
+        #desktop-threat-file i { font-size: 64px; color: var(--accent); text-shadow: 0 0 15px var(--accent); }
+        #desktop-threat-file span { color: var(--accent); }
+        #second-cursor { z-index: 1000; color: var(--danger); font-size: 24px; pointer-events: none; }
+
+
+        .window {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%; max-width: 800px;
+            background: rgba(15, 15, 35, 0.9); border: 1px solid var(--border-color);
+            border-radius: 8px; backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); z-index: 100;
+            display: none;
+        }
+        
+        .window.active {
+            z-index: 101;
+            border-color: var(--primary);
+        }
+
+        .window-header {
+            background: rgba(0, 242, 255, 0.1); padding: 8px 12px; cursor: move;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .window-header h3 { font-family: 'Exo 2', sans-serif; color: var(--primary); }
+        .window-close-btn { background: none; border: none; color: var(--text-light); font-size: 20px; cursor: pointer; }
+        .window-close-btn:hover:not(:disabled) { color: var(--danger); }
+        .window-close-btn:disabled { color: #555; cursor: not-allowed; }
+
+        .window-content { padding: 20px; max-height: 60vh; overflow-y: auto; }
+
+        .notification-center {
+            position: fixed; bottom: 60px; right: 20px;
+            width: 320px; z-index: 200;
+        }
+        .notification {
+            background: rgba(255, 77, 77, 0.8); border: 1px solid var(--danger);
+            padding: 12px; border-radius: 5px; margin-top: 10px;
+            animation: slideInRight 0.5s ease; cursor: default;
+        }
+        .notification h4 { font-weight: bold; margin-bottom: 4px; }
+        
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .taskbar {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 50px;
+            background: rgba(10, 10, 26, 0.8); backdrop-filter: blur(5px);
+            border-top: 1px solid var(--border-color); padding: 5px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 50;
+        }
+        
+        .cyber-button {
+            font-family: 'Exo 2', sans-serif; background: transparent;
+            border: 1px solid var(--border-color); color: var(--primary);
+            padding: 10px 20px; transition: all 0.3s ease;
+        }
+        .cyber-button:hover:not(:disabled) {
+            background: var(--border-color); color: var(--text-light);
+            box-shadow: 0 0 15px var(--primary);
+        }
+        .cyber-button:disabled { border-color: #555; color: #777; cursor: not-allowed; }
+        
+        .start-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 10, 26, 0.95); z-index: 999;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; text-align: center;
+        }
+
+        .feedback-toast {
+            position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; border-radius: 5px; color: var(--bg-dark);
+            font-weight: bold; z-index: 1000; animation: fadeInOut 4s ease-in-out;
+        }
+        .feedback-toast.success { background-color: var(--success); }
+        .feedback-toast.error { background-color: var(--danger); }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translate(-50%, 20px); }
+            10%, 90% { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        .list-item {
+            padding: 8px; border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
+        }
+        .list-item:hover { background: rgba(0, 242, 255, 0.1); }
+        .list-item.selected { border-color: var(--primary); background: rgba(0, 242, 255, 0.2); }
+        
+        .progress-bar-container {
+            width: 100%; background-color: rgba(0, 242, 255, 0.1);
+            border-radius: 5px; padding: 3px;
+        }
+        .progress-bar {
+            width: 0%; height: 20px; background: linear-gradient(90deg, var(--secondary), var(--primary));
+            border-radius: 3px; transition: width 0.5s linear;
+        }
+        .context-menu {
+            display: none;
+            border-top: 1px solid var(--border-color);
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+        .list-item.selected .context-menu {
+            display: block;
+        }
+        #hint-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: var(--danger);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 201;
+            box-shadow: 0 0 15px var(--danger);
+            display: none; /* Hidden by default */
+        }
+        #hint-tooltip {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: rgba(10, 10, 26, 0.95);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 200;
+            display: none;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="desktop" class="desktop p-8">
+        <div class="grid grid-cols-2 gap-4 w-max">
+            <div class="desktop-icon" data-app="email"><i class="fa-solid fa-envelope"></i><span>Poczta</span><div class="alert-dot"></div></div>
+            <div class="desktop-icon" data-app="firewall"><i class="fa-solid fa-shield-halved"></i><span>Firewall</span><div class="alert-dot"></div></div>
+            <div class="desktop-icon" data-app="antivirus"><i class="fa-solid fa-virus-covid-slash"></i><span>Antywirus</span><div class="alert-dot"></div></div>
+            <div class="desktop-icon" data-app="logs"><i class="fa-solid fa-file-lines"></i><span>Dziennik</span><div class="alert-dot"></div></div>
+            <div class="desktop-icon" data-app="employees"><i class="fa-solid fa-users"></i><span>Pracownicy</span><div class="alert-dot"></div></div>
+            <div class="desktop-icon" data-app="ad"><i class="fa-solid fa-sitemap"></i><span>Active Directory</span><div class="alert-dot"></div></div>
+            <div class="desktop-icon" data-app="updates"><i class="fa-solid fa-cloud-arrow-up"></i><span>Aktualizacje</span><div class="alert-dot"></div></div>
+            <div class="desktop-icon" data-app="actions"><i class="fa-solid fa-person-walking-arrow-right"></i><span>Czynności</span><div class="alert-dot"></div></div>
+        </div>
+
+        <div id="desktop-threat-file" title="PREMIA.exe"><i class="fa-solid fa-gift"></i><span>PREMIA.exe</span></div>
+        <div id="second-cursor"><i class="fa-solid fa-mouse-pointer"></i></div>
+
+        <div id="window-email" class="window" data-app="email"></div>
+        <div id="window-firewall" class="window" data-app="firewall"></div>
+        <div id="window-antivirus" class="window" data-app="antivirus"></div>
+        <div id="window-logs" class="window" data-app="logs"></div>
+        <div id="window-employees" class="window" data-app="employees"></div>
+        <div id="window-ad" class="window" data-app="ad"></div>
+        <div id="window-updates" class="window" data-app="updates"></div>
+        <div id="window-actions" class="window" data-app="actions"></div>
+        
+        <div id="start-overlay" class="start-overlay space-y-6 p-4">
+            <h1 class="text-5xl md:text-7xl font-black font-['Exo_2']" style="color: var(--primary);">CyberPatrol</h1>
+            <p class="text-lg max-w-2xl">Wybierz poziom trudności. Błędy nie będą wybaczane. Udowodnij swoją wartość.</p>
+            <div class="flex gap-4">
+                <button class="cyber-button text-xl" onclick="startGame('normal')">Tryb Normalny</button>
+                <button class="cyber-button text-xl" onclick="startGame('nightmare')">Tryb Koszmar</button>
+            </div>
+        </div>
+        
+        <div id="end-screen" class="start-overlay hidden space-y-6 p-4">
+            <h2 id="end-title" class="text-4xl font-bold font-['Exo_2']"></h2>
+            <p id="end-message" class="text-lg"></p>
+            <p class="text-xl">Integralność systemu: <span id="final-score" class="font-bold"></span></p>
+            <button id="restart-btn" class="cyber-button">Zagraj ponownie</button>
+        </div>
+    </div>
+
+    <div id="notification-center" class="notification-center"></div>
+    <div id="hint-button">?</div>
+    <div id="hint-tooltip"></div>
+
+    <div class="taskbar">
+        <div class="font-bold">CyberOS v2.2 Final</div>
+        <div>
+            <span class="mr-4">Integralność: <span id="score" class="font-bold text-green-400">100.0%</span></span>
+            <span>Czas: <span id="timer" class="font-bold text-yellow-400">20:00</span></span>
+        </div>
+    </div>
+
+    <script>
+    const desktop = document.getElementById('desktop');
+    const notificationCenter = document.getElementById('notification-center');
+    const scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer');
+    const startOverlay = document.getElementById('start-overlay');
+    const endScreen = document.getElementById('end-screen');
+    const restartBtn = document.getElementById('restart-btn');
+    const desktopThreatFile = document.getElementById('desktop-threat-file');
+    const secondCursor = document.getElementById('second-cursor');
+    const hintButton = document.getElementById('hint-button');
+    const hintTooltip = document.getElementById('hint-tooltip');
+
+    let score = 100.0;
+    const GAME_DURATION = 1200; // 20 minut
+    let timeLeft = GAME_DURATION;
+    let gameInterval;
+    let secondCursorInterval;
+    
+    let gameState = {};
+    let gameSettings = { difficulty: 'normal' };
+
+    const employeeList = [
+        { id: 1, name: 'Anna Nowak', department: 'HR', computerId: 'PC-HR-01' },
+        { id: 2, name: 'Piotr Kowalski', department: 'IT', computerId: 'PC-IT-01' },
+        { id: 3, name: 'Jan Wiśniewski', department: 'CEO', computerId: 'PC-CEO-01' },
+        { id: 4, name: 'Katarzyna Wójcik', department: 'Finanse', computerId: 'PC-FIN-01' },
+        { id: 5, name: 'Tomasz Kowalczyk', department: 'Marketing', computerId: 'PC-MKT-01' },
+        { id: 6, name: 'Agnieszka Zielińska', department: 'IT', computerId: 'PC-IT-02' },
+        { id: 7, name: 'Marcin Szymański', department: 'Sprzedaż', computerId: 'PC-SALES-01' },
+        { id: 8, name: 'Ewa Dąbrowska', department: 'HR', computerId: 'PC-HR-02' },
+        { id: 9, name: 'Krzysztof Lewandowski', department: 'Finanse', computerId: 'PC-FIN-02' },
+        { id: 10, name: 'Maria Zając', department: 'Marketing', computerId: 'PC-MKT-02' },
+        { id: 11, name: 'Grzegorz Woźniak', department: 'IT', computerId: 'PC-IT-03' },
+        { id: 12, name: 'Barbara Kozłowska', department: 'Sprzedaż', computerId: 'PC-SALES-02' },
+        { id: 13, name: 'Andrzej Jankowski', department: 'Logistyka', computerId: 'PC-LOG-01' },
+        { id: 14, name: 'Zofia Mazur', department: 'Logistyka', computerId: 'PC-LOG-02' },
+        { id: 15, name: 'Paweł Grabowski', department: 'IT', computerId: 'PC-IT-04' }
+    ];
+
+    const allThreatTemplates = [
+        { type: 'email', id: 'phish', data: { from: 'support@innovate-logins.com', subject: 'Wymagana akcja: Weryfikacja konta', body: 'Witaj, w związku z audytem bezpieczeństwa, prosimy o natychmiastowe zalogowanie się i potwierdzenie swoich danych na naszym portalu: http://innovate-logins.com/auth. Dziękujemy, Dział IT.', isPhishing: true } },
+        { type: 'email', id: 'safe_email', data: { from: 'Dział HR', subject: 'Nowe benefity pracownicze!', body: 'Cześć! Mamy świetne wieści! Od przyszłego miesiąca wprowadzamy karty sportowe i prywatną opiekę medyczną. Więcej szczegółów na spotkaniu w przyszłym tygodniu. Pozdrawiamy, HR.', isPhishing: false } },
+        { type: 'threat', id: 'password_on_note', targetApp: 'actions', title: 'Naruszenie polityki haseł' },
+        { type: 'threat', id: 'infected_usb', targetApp: 'antivirus', title: 'Wykryto nieautoryzowany nośnik', description: 'Pracownik podłączył do stacji roboczej niezaufany pendrive.' },
+        { type: 'threat', id: 'system_update', targetApp: 'updates', title: 'Krytyczna aktualizacja' },
+        { type: 'threat', id: 'ddos', targetApp: 'firewall', title: 'Nietypowy ruch sieciowy', description: 'Gwałtowny wzrost zapytań do serwerów.', ip: '55.123.45.67' },
+        { type: 'threat', id: 'unauthorized_access', targetApp: 'ad', title: 'Nieautoryzowany dostęp', description: 'Wykryto próbę dostępu do serwera IT z nieuprawnionego konta.' },
+        { type: 'threat', id: 'suspicious_person', targetApp: 'actions', title: 'Nieznana osoba w biurze', description: 'W dziale marketingu zauważono osobę bez identyfikatora.' },
+        { type: 'threat', id: 'desktop_malware', targetApp: 'antivirus', title: 'Nieznany plik na pulpicie', description: 'Na pulpicie pojawił się nieautoryzowany plik wykonywalny.' },
+        { type: 'threat', id: 'password_reset_req', targetApp: 'ad', title: 'Przejęcie konta' },
+        { type: 'threat', id: 'server_room_issue', targetApp: 'actions', title: 'Problem z serwerownią', description: 'Zgłoszono uchylone drzwi do serwerowni na 3. piętrze.' },
+        { type: 'threat', id: 'unauthorized_ip', targetApp: 'firewall', title: 'Próba włamania', description: 'Wykryto próbę nieautoryzowanego połączenia.', ip: '101.102.103.104' },
+        { type: 'threat', id: 'strange_file', targetApp: 'antivirus', title: 'Podejrzany plik', description: 'Wykryto dziwny plik w katalogu systemowym.' },
+        { type: 'threat', id: 'second_cursor', targetApp: 'antivirus', title: 'Zdalny pulpit?', description: 'Użytkownik zgłasza drugi kursor na ekranie.' },
+        { type: 'threat', id: 'system_slowdown', targetApp: 'antivirus', title: 'Spowolnienie systemu', description: 'Komputery w dziale finansów działają bardzo wolno.' },
+        { type: 'threat', id: 'password_reuse', targetApp: 'actions', title: 'Ponowne użycie hasła' }
+    ];
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+    
+    function generateScenario() {
+        let scenario = [];
+        const eventPool = [];
+        const numEvents = 40; // Approx 1 event every 30s
+        for(let i = 0; i < numEvents; i++) {
+            eventPool.push(JSON.parse(JSON.stringify(allThreatTemplates[i % allThreatTemplates.length])));
+        }
+        shuffleArray(eventPool);
+        
+        const timeStep = Math.floor((GAME_DURATION - 60) / eventPool.length);
+        let lastTriggerTimes = {};
+        const cooldown = 240; // 4 minutes
+
+        eventPool.forEach((template, index) => {
+            let event = template;
+            let triggerTime = 20 + (index * timeStep) + Math.floor(Math.random() * 10 - 5);
+            
+            const baseId = template.id;
+            if (lastTriggerTimes[baseId] && triggerTime < lastTriggerTimes[baseId] + cooldown) {
+                triggerTime = lastTriggerTimes[baseId] + cooldown + Math.floor(Math.random() * 10);
+            }
+            lastTriggerTimes[baseId] = triggerTime;
+            event.triggerTime = triggerTime;
+            
+            const uniqueId = `${event.id}_${index}`;
+            if (event.type === 'email') {
+                event.data.id = uniqueId;
+            }
+            event.id = uniqueId;
+
+            if (template.id === 'password_on_note' || template.id === 'password_reuse') {
+                const randomEmployee = employeeList[Math.floor(Math.random() * employeeList.length)];
+                event.employeeId = randomEmployee.id;
+            }
+            if (template.id.startsWith('system_update')) {
+                const components = ['Poczta', 'System', 'Antywirus', 'Firewall', 'ActiveDirectory'];
+                const randomComponent = components[Math.floor(Math.random() * components.length)];
+                event.component = randomComponent;
+                event.description = `Dostępna jest krytyczna aktualizacja dla komponentu: ${randomComponent}.`;
+            }
+            if (template.id.startsWith('password_reset_req')) {
+                const randomEmployee = employeeList[Math.floor(Math.random() * employeeList.length)];
+                event.employeeId = randomEmployee.id;
+                event.description = `Pracownik ${randomEmployee.name} zgłasza, że nie może się zalogować.`;
+            }
+            
+            scenario.push(event);
+        });
+
+        scenario.sort((a, b) => a.triggerTime - b.triggerTime);
+        return scenario;
+    }
+
+    function resetGameState() {
+        gameState = {
+            activeThreats: [],
+            unhandledPhishing: [],
+            notificationHistory: [],
+            emails: [],
+            network: {
+                maliciousIpToBlock: null
+            },
+            adUsers: [...employeeList.map(e => ({...e, status: 'Active'}))],
+            isBusy: false,
+            scenario: generateScenario(),
+            rogueUserPool: [
+                {id: 16, name: 'Tomasz Kowalczyk', department: 'Marketing', computerId: 'PC-IT-99', status: 'Active', isRogue: true},
+                {id: 17, name: 'Ewa Mazur', department: 'Sprzedaż', computerId: 'PC-FIN-99', status: 'Active', isRogue: true},
+                {id: 18, name: 'Adam Wójcik', department: 'Logistyka', computerId: 'PC-HR-99', status: 'Active', isRogue: true}
+            ]
+        };
+        shuffleArray(gameState.rogueUserPool);
+
+        for(let i = 0; i < 3; i++) {
+            const randomIndex = Math.floor(Math.random() * gameState.adUsers.length);
+            if(gameState.adUsers[randomIndex].id <= 15) {
+                gameState.adUsers[randomIndex].status = 'Inactive';
+            }
+        }
+    }
+
+    function showFeedback(message, type) {
+        const feedbackEl = document.createElement('div');
+        feedbackEl.className = `feedback-toast ${type}`;
+        feedbackEl.textContent = message;
+        desktop.appendChild(feedbackEl);
+        setTimeout(() => feedbackEl.remove(), 4000);
+    }
+
+    function updateUI() {
+        scoreEl.textContent = `${score.toFixed(1)}%`;
+        if (score < 30) scoreEl.className = 'font-bold text-red-500';
+        else if (score < 60) scoreEl.className = 'font-bold text-yellow-400';
+        else scoreEl.className = 'font-bold text-green-400';
+        const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const seconds = (timeLeft % 60).toString().padStart(2, '0');
+        timerEl.textContent = `${minutes}:${seconds}`;
+    }
+
+    function triggerEvent(event) {
+        const timestamp = new Date().toLocaleTimeString('pl-PL');
+        
+        if (event.type === 'email') {
+            gameState.emails.unshift(event.data);
+            gameState.notificationHistory.unshift({ timestamp, title: 'Nowy e-mail', description: `Od: ${event.data.from}` });
+            if (gameSettings.difficulty === 'normal') document.querySelector('[data-app="email"] .alert-dot').style.display = 'block';
+            if (event.data.isPhishing) {
+                gameState.unhandledPhishing.push(event.data.id);
+            }
+        } else if (event.type === 'threat') {
+            if (gameState.activeThreats.find(t => t.id === event.id)) return;
+            
+            let threatData = {...event};
+            if(threatData.id.startsWith('password_on_note') || threatData.id.startsWith('password_reuse')) {
+                const employee = employeeList.find(e => e.id === threatData.employeeId);
+                const reason = threatData.id.startsWith('password_on_note') ? 'zapisał hasło na karteczce' : 'używa tego samego hasła wszędzie';
+                if (employee) {
+                    threatData.description = `Pracownik ${employee.name} ${reason}.`;
+                } else {
+                    // This should not happen, but as a fallback:
+                    threatData.description = `Jeden z pracowników ${reason}.`;
+                    console.error("Could not find employee for threat. EmployeeId: ", threatData.employeeId, "Threat ID:", threatData.id);
+                }
+            }
+            if(threatData.id.startsWith('unauthorized_access')) {
+                if(gameState.rogueUserPool.length > 0) {
+                    const rogueUser = gameState.rogueUserPool.pop();
+                    gameState.adUsers.push(rogueUser);
+                    threatData.rogueUserId = rogueUser.id;
+                } else {
+                    return; // No more rogue users to add
+                }
+            }
+
+            gameState.activeThreats.push(threatData);
+            gameState.notificationHistory.unshift({ timestamp, ...threatData });
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `<h4>${threatData.title}</h4><p class="text-sm">${threatData.description}</p>`;
+            notificationCenter.appendChild(notification);
+            setTimeout(() => notification.remove(), 8000);
+            
+            if (gameSettings.difficulty === 'normal') document.querySelector(`[data-app="${threatData.targetApp}"] .alert-dot`).style.display = 'block';
+            if (threatData.id.startsWith('desktop_malware')) {
+                desktopThreatFile.style.display = 'block';
+            }
+            if (threatData.id.startsWith('second_cursor')) {
+                activateSecondCursor();
+            }
+        }
+    }
+
+    function gameLoop() {
+        timeLeft--;
+        if (!gameState.isBusy) {
+            const activeThreatCount = gameState.activeThreats.length + gameState.unhandledPhishing.length;
+            if (activeThreatCount > 0) {
+                 const penalty = (activeThreatCount ** 1.9) * 0.09;
+                 score = Math.max(0, score - penalty);
+            }
+        }
+        const timeElapsed = GAME_DURATION - timeLeft;
+        gameState.scenario.forEach(event => {
+            if (event.triggerTime === timeElapsed) triggerEvent(event);
+        });
+        if (timeLeft <= 0) endGame(true);
+        if (score <= 0) endGame(false);
+        updateUI();
+        updateHintTooltip();
+    }
+    
+    function setBusy(duration, container, onComplete, onProgressText = 'Przetwarzanie...') {
+        gameState.isBusy = true;
+        document.querySelectorAll('.window-close-btn').forEach(btn => btn.disabled = true);
+        container.innerHTML = `<div class="p-4 text-center">
+                                <p id="progress-text">${onProgressText}</p>
+                                <div class="progress-bar-container mt-2">
+                                    <div class="progress-bar" id="progress-bar-el"></div>
+                                </div>
+                               </div>`;
+        const progressBarEl = container.querySelector('#progress-bar-el');
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 100 / (duration / 100);
+            progressBarEl.style.width = `${progress}%`;
+            if (progress >= 100) {
+                clearInterval(interval);
+                gameState.isBusy = false;
+                document.querySelectorAll('.window-close-btn').forEach(btn => btn.disabled = false);
+                onComplete();
+            }
+        }, 100);
+    }
+
+    function openWindow(appId) {
+        if(gameState.isBusy) {
+            showFeedback('System jest zajęty...', 'error');
+            return;
+        }
+        const windowEl = document.getElementById(`window-${appId}`);
+        windowEl.style.display = 'block';
+        
+        document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+        windowEl.classList.add('active');
+
+        if (!windowEl.innerHTML) {
+            let contentHTML = `<div class="window-header"><h3>${appId.charAt(0).toUpperCase() + appId.slice(1)}</h3><button class="window-close-btn">&times;</button></div><div class="window-content" id="app-content-${appId}"></div>`;
+            windowEl.innerHTML = contentHTML;
+            windowEl.querySelector('.window-close-btn').onclick = () => windowEl.style.display = 'none';
+            makeDraggable(windowEl);
+        }
+        renderAppContent(appId);
+    }
+    
+    function closeAllWindows() {
+        document.querySelectorAll('.window').forEach(w => {
+            if (w.style.display !== 'none') {
+                w.style.display = 'none';
+            }
+        });
+    }
+
+    function renderAppContent(appId, view = 'main', data = null) {
+        const contentContainer = document.getElementById(`app-content-${appId}`);
+        if (!contentContainer || gameState.isBusy) return;
+        let html = '';
+
+        switch(appId) {
+            case 'email':
+                if (gameSettings.difficulty === 'normal') document.querySelector('[data-app="email"] .alert-dot').style.display = 'none';
+                html += `<h4>Skrzynka odbiorcza (${gameState.emails.length})</h4><div class="mt-4 space-y-2">`;
+                if(gameState.emails.length === 0) html += '<p>Brak wiadomości.</p>';
+                gameState.emails.forEach(email => {
+                    html += `<div class="list-item" onclick="renderAppContent('email', 'details', '${email.id}')"><strong>Od:</strong> ${email.from} | <strong>Temat:</strong> ${email.subject}</div>`;
+                });
+                html += '</div>';
+                if (view === 'details' && data) {
+                    const email = gameState.emails.find(e => e.id === data);
+                    if (email) {
+                        html += `<hr class="my-4 border-gray-600"><h4>Od: ${email.from}</h4><p>Temat: ${email.subject}</p><div class="mt-2 p-2 bg-gray-900 rounded">${email.body}</div>
+                                <div class="mt-4 flex gap-4"><button class="cyber-button" onclick="handleEmail('${email.id}', 'delete')">Usuń (Podejrzany)</button>
+                                <button class="cyber-button" onclick="handleEmail('${email.id}', 'archive')">Archiwizuj (Bezpieczny)</button></div>`;
+                    }
+                }
+                break;
+            
+            case 'antivirus':
+                html += `<div class="flex gap-4">
+                            <button class="cyber-button" onclick="startScan('quick')">Szybki Skan</button>
+                            <button class="cyber-button" onclick="startScan('full')">Pełny Skan</button>
+                         </div><div id="av-results" class="mt-4"></div>`;
+                break;
+            
+            case 'firewall':
+                html += `<div class="flex gap-4">
+                            <button class="cyber-button" onclick="startNetworkScan()">Skaner Sieci</button>
+                            <button class="cyber-button" onclick="renderAppContent('firewall', 'rules')">Zarządzaj Regułami</button>
+                         </div><div id="fw-view" class="mt-4"></div>`;
+                if (view === 'rules') {
+                    html = `<h4>Reguły blokowania IP</h4>`;
+                    if (gameState.network.maliciousIpToBlock) {
+                        html += `<p class="text-yellow-400 mt-2">Zadanie: Zablokuj adres IP powodujący atak.</p>
+                                 <input type="text" id="ip-input" placeholder="Wpisz IP..." class="bg-gray-900 border border-gray-600 rounded p-1 mt-2 w-full">
+                                 <button class="cyber-button mt-2" onclick="blockIp()">Zablokuj</button>`;
+                    } else {
+                        html += `<p class="mt-2">Brak zdefiniowanych zadań.</p>`;
+                    }
+                }
+                break;
+            
+            case 'logs':
+                html += '<h4>Historia Powiadomień</h4><div class="mt-4 space-y-2">';
+                if (gameState.notificationHistory.length === 0) html += '<p>Brak zdarzeń.</p>';
+                else {
+                    gameState.notificationHistory.forEach(n => {
+                        html += `<div class="list-item"><span class="font-bold text-gray-500">${n.timestamp}</span> - ${n.title}: ${n.description}</div>`;
+                    });
+                }
+                html += '</div>';
+                break;
+
+            case 'employees':
+                html += '<h4>Lista pracowników</h4><div class="mt-4 space-y-2 text-sm">';
+                employeeList.forEach(emp => {
+                    html += `<div class="list-item grid grid-cols-3 gap-2">
+                                <span><i class="fa-solid fa-user mr-2"></i>${emp.name}</span>
+                                <span><i class="fa-solid fa-briefcase mr-2"></i>${emp.department}</span>
+                                <span><i class="fa-solid fa-desktop mr-2"></i>${emp.computerId}</span>
+                             </div>`;
+                });
+                html += '</div>';
+                break;
+            
+            case 'ad':
+                if(gameSettings.difficulty === 'normal') document.querySelector('[data-app="ad"] .alert-dot').style.display = 'none';
+                html += `<h4>Użytkownicy Active Directory</h4><div id="ad-user-list" class="mt-4 space-y-2">`;
+                gameState.adUsers.forEach(user => {
+                    const isThreat = user.isRogue && gameState.activeThreats.some(t => t.id.startsWith('unauthorized_access')) && gameSettings.difficulty === 'normal';
+                    html += `<div class="list-item ${isThreat ? 'text-yellow-400' : ''}" onclick="toggleAdUserDetails(${user.id})">
+                                ${user.name} - Status: <span class="${user.status === 'Active' ? 'text-green-400' : 'text-red-400'}">${user.status}</span>
+                                <div class="context-menu" id="ad-user-details-${user.id}"></div>
+                             </div>`;
+                });
+                html += '</div>';
+                break;
+
+            case 'updates':
+                if(gameSettings.difficulty === 'normal') document.querySelector('[data-app="updates"] .alert-dot').style.display = 'none';
+                html += `<h4>Centrum Aktualizacji</h4><p class="text-sm text-gray-400">Wybierz komponent do zaktualizowania.</p><div id="update-list" class="mt-4 grid grid-cols-2 gap-4">`;
+                ['Poczta', 'System', 'Antywirus', 'Firewall', 'ActiveDirectory'].forEach(comp => {
+                    html += `<button class="cyber-button" onclick="handleUpdate('${comp}')">Aktualizuj ${comp}</button>`;
+                });
+                html += `</div>`;
+                break;
+            
+            case 'actions':
+                if(gameSettings.difficulty === 'normal') document.querySelector('[data-app="actions"] .alert-dot').style.display = 'none';
+                html += `<h4>Czynności Dodatkowe</h4><div id="actions-view" class="grid grid-cols-2 gap-4">
+                            <button class="cyber-button" onclick="handleAction('reprimand')">Upomnij pracownika</button>
+                            <button class="cyber-button" onclick="handleAction('server_room')">Sprawdź serwerownię</button>
+                            <button class="cyber-button" onclick="handleAction('badge_check')">Spytaj o przepustkę</button>
+                         </div>`;
+                break;
+        }
+        contentContainer.innerHTML = html;
+    }
+
+    function toggleAdUserDetails(userId) {
+        const allDetails = document.querySelectorAll('.context-menu');
+        allDetails.forEach(d => {
+            if (d.id !== `ad-user-details-${userId}`) {
+                d.style.display = 'none';
+                d.parentElement.classList.remove('selected');
+            }
+        });
+
+        const detailsContainer = document.getElementById(`ad-user-details-${userId}`);
+        const parentItem = detailsContainer.parentElement;
+
+        if (detailsContainer.style.display === 'block') {
+            detailsContainer.style.display = 'none';
+            parentItem.classList.remove('selected');
+        } else {
+            const user = gameState.adUsers.find(u => u.id === userId);
+            detailsContainer.innerHTML = `
+                <p>Dział: ${user.department}</p>
+                <p>Komputer: ${user.computerId}</p>
+                <div class="mt-4 flex gap-4">
+                    <button class="cyber-button text-sm" onclick="disableUserAccount(${user.id})" ${user.status !== 'Active' ? 'disabled' : ''}>Zablokuj Konto</button>
+                    <button class="cyber-button text-sm" onclick="resetUserPassword(${user.id})">Resetuj Hasło</button>
+                </div>`;
+            detailsContainer.style.display = 'block';
+            parentItem.classList.add('selected');
+        }
+    }
+    
+    function handleEmail(emailId, action) {
+        const email = gameState.emails.find(e => e.id === emailId);
+        const correctAction = (email.isPhishing && action === 'delete') || (!email.isPhishing && action === 'archive');
+        if (correctAction) {
+            showFeedback('Dobra decyzja.', 'success');
+            if(email.isPhishing) gameState.unhandledPhishing = gameState.unhandledPhishing.filter(id => id !== emailId);
+        } else {
+            score -= 15;
+            showFeedback('Zła decyzja! Strata integralności.', 'error');
+        }
+        gameState.emails = gameState.emails.filter(e => e.id !== emailId);
+        renderAppContent('email');
+    }
+
+    function startScan(type) {
+        if (gameState.isBusy) { showFeedback('System jest zajęty...', 'error'); return; }
+        const container = document.getElementById('av-results');
+        let duration = 0, foundThreatId = null, threatType = '';
+        if (type === 'quick') {
+            duration = 5000;
+            let threat = gameState.activeThreats.find(t => t.id.startsWith('desktop_malware'));
+            if (threat) { foundThreatId = threat.id; threatType = 'plik na pulpicie'; }
+            else {
+                threat = gameState.activeThreats.find(t => t.id.startsWith('second_cursor'));
+                if (threat) { foundThreatId = threat.id; threatType = 'drugi kursor'; }
+                else {
+                    threat = gameState.activeThreats.find(t => t.id.startsWith('strange_file'));
+                    if (threat) { foundThreatId = threat.id; threatType = 'podejrzany plik'; }
+                }
+            }
+        } else if (type === 'full') {
+            duration = 10000;
+            let threat = gameState.activeThreats.find(t => t.id.startsWith('infected_usb'));
+            if (threat) { foundThreatId = threat.id; threatType = 'zainfekowany nośnik USB'; }
+            else {
+                threat = gameState.activeThreats.find(t => t.id.startsWith('desktop_malware'));
+                if (threat) { foundThreatId = threat.id; threatType = 'plik na pulpicie'; }
+                else {
+                    threat = gameState.activeThreats.find(t => t.id.startsWith('second_cursor'));
+                    if (threat) { foundThreatId = threat.id; threatType = 'drugi kursor'; }
+                    else {
+                        threat = gameState.activeThreats.find(t => t.id.startsWith('strange_file'));
+                        if (threat) { foundThreatId = threat.id; threatType = 'podejrzany plik'; }
+                        else {
+                           threat = gameState.activeThreats.find(t => t.id.startsWith('system_slowdown'));
+                           if (threat) { foundThreatId = threat.id; threatType = 'spowolnienie systemu'; }
+                        }
+                    }
+                }
+            }
+        }
+        
+        setBusy(duration, container, () => {
+            if (foundThreatId) {
+                showFeedback(`Wykryto i usunięto zagrożenie (${threatType})!`, 'success');
+                gameState.activeThreats = gameState.activeThreats.filter(t => t.id !== foundThreatId);
+                if(gameSettings.difficulty === 'normal' && !gameState.activeThreats.some(t => t.targetApp === 'antivirus')) {
+                     document.querySelector(`[data-app="antivirus"] .alert-dot`).style.display = 'none';
+                }
+                if(foundThreatId.startsWith('desktop_malware')) desktopThreatFile.style.display = 'none';
+                if(foundThreatId.startsWith('second_cursor')) deactivateSecondCursor();
+            } else {
+                showFeedback('Ten typ skanowania nic nie znalazł.', 'error');
+            }
+            renderAppContent('antivirus');
+        }, `Skanowanie (${type})...`);
+    }
+
+    function startNetworkScan() {
+        if (gameState.isBusy) { showFeedback('System jest zajęty...', 'error'); return; }
+        const container = document.getElementById('fw-view');
+        const ddosThreat = gameState.activeThreats.find(t => t.id.startsWith('ddos') || t.id.startsWith('unauthorized_ip'));
+        setBusy(8000, container, () => {
+            let resultsHTML = '<h4>Wyniki skanowania sieci:</h4>';
+            if (ddosThreat) {
+                resultsHTML += `<p class="text-red-500">Wykryto zmasowany ruch z adresu IP: <strong>${ddosThreat.ip}</strong>. Zablokuj go w regułach.</p>`;
+                gameState.network.maliciousIpToBlock = ddosThreat.ip;
+            } else {
+                resultsHTML += `<p class="text-green-400">Ruch sieciowy w normie.</p>`;
+            }
+            container.innerHTML = resultsHTML;
+        }, 'Skanowanie sieci...');
+    }
+
+    function blockIp() {
+        const input = document.getElementById('ip-input');
+        if (input.value.trim() === gameState.network.maliciousIpToBlock) {
+            showFeedback('Podejrzany ruch sieciowy zablokowany!', 'success');
+            gameState.activeThreats = gameState.activeThreats.filter(t => t.ip !== gameState.network.maliciousIpToBlock);
+            if(gameSettings.difficulty === 'normal' && !gameState.activeThreats.some(t => t.targetApp === 'firewall')) {
+                document.querySelector(`[data-app="firewall"] .alert-dot`).style.display = 'none';
+            }
+            gameState.network.maliciousIpToBlock = null;
+        } else {
+            score -= 25;
+            showFeedback('KRYTYCZNY BŁĄD! Zablokowano zły adres IP!', 'error');
+        }
+        renderAppContent('firewall', 'rules');
+    }
+
+    function disableUserAccount(userId) {
+        const user = gameState.adUsers.find(u => u.id === userId);
+        const threat = gameState.activeThreats.find(t => t.id.startsWith('unauthorized_access'));
+        if (user.isRogue && threat && user.id === threat.rogueUserId) {
+            showFeedback('Intruz zablokowany!', 'success');
+            gameState.activeThreats = gameState.activeThreats.filter(t => !t.id.startsWith('unauthorized_access'));
+        } else {
+            score -= 20;
+            showFeedback('Błąd! Zablokowano konto niewinnego pracownika!', 'error');
+        }
+        user.status = 'Disabled';
+        renderAppContent('ad');
+    }
+    
+    function resetUserPassword(userId) {
+        const threat = gameState.activeThreats.find(t => t.id.startsWith('password_reset_req'));
+        if (threat && userId === threat.employeeId) {
+            showFeedback(`Hasło dla ${employeeList.find(e => e.id === userId).name} zostało zresetowane!`, 'success');
+            gameState.activeThreats = gameState.activeThreats.filter(t => !t.id.startsWith('password_reset_req'));
+        } else {
+            score -= 20;
+            showFeedback('Błąd! Zresetowano hasło niewłaściwej osobie!', 'error');
+        }
+        renderAppContent('ad');
+    }
+    
+    function handleUpdate(component) {
+        if (gameState.isBusy) { showFeedback('System jest zajęty...', 'error'); return; }
+        const threat = gameState.activeThreats.find(t => t.id.startsWith('system_update'));
+        const container = document.getElementById('update-list');
+        setBusy(7000, container, () => {
+            if (threat && threat.component.toLowerCase() === component.toLowerCase()) {
+                showFeedback(`Aktualizacja ${component} zakończona sukcesem!`, 'success');
+                gameState.activeThreats = gameState.activeThreats.filter(t => t.id !== threat.id);
+            } else {
+                score -= 10;
+                showFeedback(`Błąd! Niepotrzebna aktualizacja zmarnowała zasoby.`, 'error');
+            }
+            renderAppContent('updates');
+        }, `Aktualizowanie ${component}...`);
+    }
+    
+    function handleAction(action) {
+        if (gameState.isBusy) { showFeedback('System jest zajęty...', 'error'); return; }
+        let threatId, correct, successMsg, errorMsg, penalty = 15;
+        switch(action) {
+            case 'reprimand':
+                const reprimandThreat = gameState.activeThreats.find(t => t.id.startsWith('password_on_note') || t.id.startsWith('password_reuse'));
+                threatId = reprimandThreat ? reprimandThreat.id : null;
+                correct = !!reprimandThreat;
+                successMsg = 'Wysłano ogólnofirmowe przypomnienie o polityce haseł.';
+                errorMsg = 'Nie wykryto żadnych naruszeń polityki haseł.';
+                break;
+            case 'server_room':
+                const serverThreat = gameState.activeThreats.find(t => t.id.startsWith('server_room_issue'));
+                threatId = serverThreat ? serverThreat.id : null;
+                correct = !!serverThreat;
+                successMsg = 'Serwerownia sprawdzona i zabezpieczona.';
+                errorMsg = 'Niepotrzebna akcja. Strata czasu.';
+                break;
+            case 'badge_check':
+                const personThreat = gameState.activeThreats.find(t => t.id.startsWith('suspicious_person'));
+                threatId = personThreat ? personThreat.id : null;
+                correct = !!personThreat;
+                successMsg = 'Osoba bez przepustki została eskortowana z budynku.';
+                errorMsg = 'Niepotrzebna akcja. Strata czasu.';
+                break;
+        }
+        
+        const container = document.getElementById('actions-view');
+        if (!container) return;
+        setBusy(4000, container, () => {
+            if (correct) {
+                showFeedback(successMsg, 'success');
+                gameState.activeThreats = gameState.activeThreats.filter(t => t.id !== threatId);
+            } else {
+                score -= penalty;
+                showFeedback(errorMsg, 'error');
+            }
+            renderAppContent('actions');
+        }, 'Wykonywanie czynności...');
+    }
+
+    function makeDraggable(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        const header = element.querySelector(".window-header");
+        if (header) {
+            header.onmousedown = dragMouseDown;
+        }
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            document.querySelectorAll('.window').forEach(w => w.classList.remove('active'));
+            element.classList.add('active');
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+        }
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+    
+    function activateSecondCursor() {
+        secondCursor.style.display = 'block';
+        secondCursorInterval = setInterval(() => {
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * window.innerHeight;
+            secondCursor.style.left = `${x}px`;
+            secondCursor.style.top = `${y}px`;
+        }, 1000);
+    }
+
+    function deactivateSecondCursor() {
+        clearInterval(secondCursorInterval);
+        secondCursor.style.display = 'none';
+    }
+
+    function updateHintTooltip() {
+        if (gameSettings.difficulty !== 'normal') return;
+        
+        let hintHTML = '<h4>Aktywne Zagrożenia:</h4><ul class="list-disc list-inside mt-2 text-sm">';
+        let hasThreats = false;
+
+        gameState.activeThreats.forEach(threat => {
+            hintHTML += `<li>${threat.title}</li>`;
+            hasThreats = true;
+        });
+        gameState.unhandledPhishing.forEach(phishId => {
+            const email = gameState.emails.find(e => e.id === phishId) || gameState.notificationHistory.find(n => n.id === phishId);
+            if(email) {
+                hintHTML += `<li>Nierozwiązany e-mail phishingowy</li>`;
+                hasThreats = true;
+            }
+        });
+
+        if (!hasThreats) {
+            hintHTML += '<li>Brak aktywnych zagrożeń. Dobra robota!</li>';
+        }
+        hintHTML += '</ul>';
+        hintTooltip.innerHTML = hintHTML;
+    }
+
+    function startGame(difficulty) {
+        gameSettings.difficulty = difficulty;
+        resetGameState();
+        score = 100.0; timeLeft = GAME_DURATION;
+        closeAllWindows();
+        document.querySelectorAll('.alert-dot').forEach(d => d.style.display = 'none');
+        desktopThreatFile.style.display = 'none';
+        startOverlay.classList.add('hidden');
+        endScreen.classList.add('hidden');
+        if (gameSettings.difficulty === 'normal') {
+            hintButton.style.display = 'flex';
+        } else {
+            hintButton.style.display = 'none';
+        }
+        updateUI();
+        gameInterval = setInterval(gameLoop, 1000);
+    }
+    
+    function endGame(win) {
+        clearInterval(gameInterval);
+        if (secondCursorInterval) clearInterval(secondCursorInterval);
+        endScreen.classList.remove('hidden');
+        hintButton.style.display = 'none';
+        hintTooltip.style.display = 'none';
+        const endTitle = document.getElementById('end-title');
+        const endMessage = document.getElementById('end-message');
+        if(win && score > 0) {
+            endTitle.textContent = 'Misja Zakończona Sukcesem!';
+            endMessage.textContent = 'Gratulacje! Utrzymałeś bezpieczeństwo firmy.';
+        } else {
+            endTitle.textContent = 'Misja Zakończona Porażką';
+            endMessage.textContent = 'Niestety, integralność systemu spadła do zera lub czas minął. Spróbuj ponownie!';
+        }
+        document.getElementById('final-score').textContent = `${score.toFixed(1)}%`;
+    }
+
+    document.querySelectorAll('.desktop-icon').forEach(icon => icon.addEventListener('click', () => openWindow(icon.dataset.app)));
+    desktopThreatFile.addEventListener('click', () => {
+        if(gameState.isBusy) return;
+        score = Math.max(0, score - 50);
+        showFeedback('KRYTYCZNY BŁĄD! Uruchomiono złośliwe oprogramowanie!', 'error');
+        gameState.activeThreats = gameState.activeThreats.filter(t => !t.id.startsWith('desktop_malware'));
+        desktopThreatFile.style.display = 'none';
+        if(gameSettings.difficulty === 'normal') document.querySelector(`[data-app="antivirus"] .alert-dot`).style.display = 'none';
+    });
+    restartBtn.addEventListener('click', () => {
+        endScreen.classList.add('hidden');
+        startOverlay.classList.remove('hidden');
+    });
+    hintButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hintTooltip.style.display = hintTooltip.style.display === 'block' ? 'none' : 'block';
+    });
+    document.addEventListener('click', () => {
+        hintTooltip.style.display = 'none';
+    });
+
+    </script>
+</body>
+</html>
